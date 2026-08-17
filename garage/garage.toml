@@ -1,0 +1,16 @@
+# Minimal single-node Garage configuration for the local tech-test stack.
+# The rpc_secret is local-only and carries no security value.
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_secret = "5c1915fa9b2e0aebf969806844aca8b9bbc4754c2e16e26eb70b6a14ab50a0a3"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"

@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment
+.env
+
+# Dagster
+.dagster_home/
+tmp*/
+
+# Local data
+garage-data/
+postgres-data/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

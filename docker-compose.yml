@@ -1,0 +1,87 @@
+# Connection details shared across the stack. Reference these in any service
+# you add (e.g. your Bento container) with:  <<: *connection-env
+x-connection-env: &connection-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: sales
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  EVENT_SOURCE_URL: http://event-source:8000/event
+  S3_ENDPOINT_URL: http://garage:3900
+  S3_REGION: garage
+  S3_BUCKET: reports
+  AWS_ACCESS_KEY_ID: GKtechtest0000000000000000
+  AWS_SECRET_ACCESS_KEY: techtest-secret-key
+
+services:
+  event-source:
+    build: ./event-source
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request as u; u.urlopen(\"http://localhost:8000/health\")'"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pipeline
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: sales
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      # postgres:18 images expect the mount at /var/lib/postgresql (not .../data)
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sales"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - pipeline
+
+  garage:
+    image: dxflrs/garage:v2.3.0
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_DEFAULT_ACCESS_KEY: GKtechtest0000000000000000
+      GARAGE_DEFAULT_SECRET_KEY: techtest-secret-key
+      GARAGE_DEFAULT_BUCKET: reports
+    ports:
+      - "3900:3900"
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-data:/var/lib/garage
+    networks:
+      - pipeline
+
+  dagster:
+    build: ./dagster
+    environment:
+      <<: *connection-env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./dagster_project:/opt/dagster/app/dagster_project
+    depends_on:
+      postgres:
+        condition: service_healthy
+      garage:
+        condition: service_started
+    networks:
+      - pipeline
+
+volumes:
+  postgres-data:
+  garage-data:
+
+networks:
+  pipeline:
+    name: tech-test-pipeline
